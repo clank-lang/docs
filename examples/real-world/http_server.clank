@@ -1,0 +1,134 @@
+// Simple HTTP Server Types
+// Demonstrates: real-world modeling with refinement types
+
+// HTTP status codes with valid ranges
+τ StatusCode = ℕ{self ≥ 100 ∧ self < 600}
+
+// HTTP methods
+sum HttpMethod {
+  Get,
+  Post,
+  Put,
+  Delete,
+  Patch,
+  Head,
+  Options
+}
+
+// Headers as a map
+τ Headers = Map[𝕊, 𝕊]
+
+// Request structure
+rec HttpRequest {
+  method: HttpMethod,
+  path: 𝕊{len(self) > 0},
+  headers: Headers,
+  body: Option[𝕊]
+}
+
+// Response structure
+rec HttpResponse {
+  status: StatusCode,
+  headers: Headers,
+  body: 𝕊
+}
+
+// Response constructors
+ƒ ok(body: 𝕊) → HttpResponse {
+  HttpResponse {
+    status: 200,
+    headers: Map::from([("Content-Type", "text/plain")]),
+    body
+  }
+}
+
+ƒ json_response[T: Serialize](data: T) → HttpResponse {
+  HttpResponse {
+    status: 200,
+    headers: Map::from([("Content-Type", "application/json")]),
+    body: to_json(data)
+  }
+}
+
+ƒ created(body: 𝕊, location: 𝕊) → HttpResponse {
+  HttpResponse {
+    status: 201,
+    headers: Map::from([
+      ("Content-Type", "text/plain"),
+      ("Location", location)
+    ]),
+    body
+  }
+}
+
+ƒ bad_request(message: 𝕊) → HttpResponse {
+  HttpResponse {
+    status: 400,
+    headers: Map::from([("Content-Type", "text/plain")]),
+    body: message
+  }
+}
+
+ƒ not_found() → HttpResponse {
+  HttpResponse {
+    status: 404,
+    headers: Map::new(),
+    body: "Not Found"
+  }
+}
+
+ƒ internal_error(message: 𝕊) → HttpResponse {
+  HttpResponse {
+    status: 500,
+    headers: Map::from([("Content-Type", "text/plain")]),
+    body: message
+  }
+}
+
+// Route handler type
+τ Handler = (HttpRequest) → IO[HttpResponse]
+
+// Simple router
+rec Route {
+  method: HttpMethod,
+  path: 𝕊,
+  handler: Handler
+}
+
+ƒ match_route(routes: [Route], req: HttpRequest) → Option[Handler] {
+  for route ∈ routes {
+    if route.method == req.method ∧ route.path == req.path {
+      return Some(route.handler)
+    }
+  }
+  None
+}
+
+ƒ handle_request(routes: [Route], req: HttpRequest) → IO[HttpResponse] {
+  match match_route(routes, req) {
+    Some(handler) → handler(req),
+    None → not_found()
+  }
+}
+
+// Example handlers
+ƒ health_handler(req: HttpRequest) → IO[HttpResponse] {
+  ok("OK")
+}
+
+ƒ echo_handler(req: HttpRequest) → IO[HttpResponse] {
+  match req.body {
+    Some(body) → ok(body),
+    None → bad_request("No body provided")
+  }
+}
+
+ƒ main() → IO[()] {
+  let routes = [
+    Route { method: Get, path: "/health", handler: health_handler },
+    Route { method: Post, path: "/echo", handler: echo_handler }
+  ]
+
+  // Start server (pseudo-code)
+  serve(8080, λreq → handle_request(routes, req))
+}

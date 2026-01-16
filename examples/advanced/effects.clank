@@ -1,0 +1,69 @@
+// Effect Types
+// Demonstrates: IO, Err, effect tracking, effect composition
+
+// Pure function — no effects
+ƒ add(a: ℤ, b: ℤ) → ℤ {
+  a + b
+}
+
+// IO effect — performs input/output
+ƒ greet(name: 𝕊) → IO[()] {
+  println("Hello, " ++ name ++ "!")
+}
+
+// Error effect — can fail
+rec ParseError { message: 𝕊, position: ℕ }
+
+ƒ parse_positive(s: 𝕊) → Err[ParseError, ℤ{self > 0}] {
+  match parse_int(s) {
+    Ok(n) if n > 0 → Ok(n),
+    Ok(n) → Err(ParseError { message: "Expected positive", position: 0 }),
+    Err(e) → Err(e)
+  }
+}
+
+// Combined effects — IO + Err
+rec IoError { kind: 𝕊, path: 𝕊 }
+
+ƒ read_number_from_file(path: 𝕊) → IO[Err[IoError, ℤ]] {
+  let content = read_file(path)?
+
+  match content {
+    Ok(text) → {
+      match parse_int(text) {
+        Ok(n) → Ok(n),
+        Err(_) → Err(IoError { kind: "parse", path })
+      }
+    },
+    Err(e) → Err(IoError { kind: "read", path })
+  }
+}
+
+// Effect propagation with ?
+ƒ process_config(path: 𝕊) → IO[Err[𝕊, Config]] {
+  let content = read_file(path).map_err(λe → "Read error: " ++ e.message)?
+  let config = parse_config(content).map_err(λe → "Parse error: " ++ e.message)?
+  Ok(config)
+}
+
+// Keeping effects minimal — pure core with effectful shell
+ƒ compute_result(data: [ℤ]) → ℤ {
+  // Pure computation
+  data |> filter(λn → n > 0) |> fold(0, λ(a, b) → a + b)
+}
+
+ƒ main() → IO[()] {
+  // Effectful shell
+  let data = load_data()
+  let result = compute_result(data)  // Pure
+  println("Result: " ++ str(result))
+}
+
+// Async effect (for completeness)
+ƒ fetch_data(url: 𝕊) → Async[Err[HttpError, 𝕊]] {
+  // ... async HTTP request
+}
+
+ƒ fetch_all(urls: [𝕊]) → Async[Err[HttpError, [𝕊]]] {
+  urls |> map(fetch_data) |> sequence
+}

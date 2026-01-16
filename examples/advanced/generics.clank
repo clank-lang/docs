@@ -1,0 +1,111 @@
+// Advanced Generics
+// Demonstrates: type parameters, constraints, higher-kinded types
+
+// Basic generic function
+ƒ identity[T](x: T) → T {
+  x
+}
+
+// Multiple type parameters
+ƒ pair[A, B](a: A, b: B) → (A, B) {
+  (a, b)
+}
+
+// Constrained generics — T must implement Ord
+ƒ max[T: Ord](a: T, b: T) → T {
+  if a > b { a } else { b }
+}
+
+// Multiple constraints
+ƒ show_max[T: Ord + Show](a: T, b: T) → 𝕊 {
+  show(max(a, b))
+}
+
+// Generic data structures
+sum Option[T] {
+  Some(T),
+  None
+}
+
+sum Result[T, E] {
+  Ok(T),
+  Err(E)
+}
+
+rec Pair[A, B] {
+  first: A,
+  second: B
+}
+
+// Generic functions on generic types
+ƒ map_option[T, U](opt: Option[T], f: (T) → U) → Option[U] {
+  match opt {
+    Some(x) → Some(f(x)),
+    None → None
+  }
+}
+
+ƒ flat_map_option[T, U](opt: Option[T], f: (T) → Option[U]) → Option[U] {
+  match opt {
+    Some(x) → f(x),
+    None → None
+  }
+}
+
+ƒ map_result[T, U, E](res: Result[T, E], f: (T) → U) → Result[U, E] {
+  match res {
+    Ok(x) → Ok(f(x)),
+    Err(e) → Err(e)
+  }
+}
+
+ƒ map_error[T, E, F](res: Result[T, E], f: (E) → F) → Result[T, F] {
+  match res {
+    Ok(x) → Ok(x),
+    Err(e) → Err(f(e))
+  }
+}
+
+// Functor-like operations on arrays
+ƒ map[T, U](arr: [T], f: (T) → U) → [U] {
+  let mut result: [U] = []
+  for item ∈ arr {
+    result = result ++ [f(item)]
+  }
+  result
+}
+
+ƒ filter[T](arr: [T], pred: (T) → 𝔹) → [T] {
+  let mut result: [T] = []
+  for item ∈ arr {
+    if pred(item) {
+      result = result ++ [item]
+    }
+  }
+  result
+}
+
+ƒ fold[T, U](arr: [T], init: U, f: (U, T) → U) → U {
+  let mut acc = init
+  for item ∈ arr {
+    acc = f(acc, item)
+  }
+  acc
+}
+
+// Chained transformations
+ƒ process(numbers: [ℤ]) → ℤ {
+  numbers
+    |> filter(λn → n > 0)
+    |> map(λn → n × 2)
+    |> fold(0, λ(a, b) → a + b)
+}
+
+ƒ main() → IO[()] {
+  let nums = [1, -2, 3, -4, 5]
+  println("Processed: " ++ str(process(nums)))
+
+  let opt = Some(42)
+  let doubled = map_option(opt, λn → n × 2)
+  println("Doubled: " ++ show(doubled))
+}

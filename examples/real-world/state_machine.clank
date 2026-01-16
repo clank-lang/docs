@@ -1,0 +1,154 @@
+// State Machine Pattern
+// Demonstrates: sum types for states, exhaustive transitions
+
+// Order processing state machine
+sum OrderState {
+  Created,
+  PaymentPending,
+  PaymentReceived(PaymentInfo),
+  Processing,
+  Shipped(TrackingInfo),
+  Delivered,
+  Cancelled(𝕊)  // reason
+}
+
+rec PaymentInfo {
+  amount: ℝ{self > 0.0},
+  method: 𝕊,
+  transaction_id: 𝕊
+}
+
+rec TrackingInfo {
+  carrier: 𝕊,
+  tracking_number: 𝕊,
+  estimated_delivery: Date
+}
+
+// Events that can occur
+sum OrderEvent {
+  SubmitPayment(PaymentInfo),
+  PaymentConfirmed,
+  StartProcessing,
+  Ship(TrackingInfo),
+  MarkDelivered,
+  Cancel(𝕊)
+}
+
+// State transition function — exhaustive pattern matching ensures all cases handled
+ƒ transition(state: OrderState, event: OrderEvent) → Result[OrderState, 𝕊] {
+  match (state, event) {
+    // Created → PaymentPending
+    (Created, SubmitPayment(info)) → Ok(PaymentPending),
+
+    // PaymentPending → PaymentReceived
+    (PaymentPending, PaymentConfirmed) → {
+      // In real code, payment info would come from event
+      Err("PaymentConfirmed needs payment info")
+    },
+
+    // PaymentReceived → Processing
+    (PaymentReceived(_), StartProcessing) → Ok(Processing),
+
+    // Processing → Shipped
+    (Processing, Ship(tracking)) → Ok(Shipped(tracking)),
+
+    // Shipped → Delivered
+    (Shipped(_), MarkDelivered) → Ok(Delivered),
+
+    // Cancellation from any cancellable state
+    (Created, Cancel(reason)) → Ok(Cancelled(reason)),
+    (PaymentPending, Cancel(reason)) → Ok(Cancelled(reason)),
+    (PaymentReceived(_), Cancel(reason)) → Ok(Cancelled(reason)),
+
+    // Cannot cancel after processing started
+    (Processing, Cancel(_)) → Err("Cannot cancel order in processing"),
+    (Shipped(_), Cancel(_)) → Err("Cannot cancel shipped order"),
+    (Delivered, Cancel(_)) → Err("Cannot cancel delivered order"),
+    (Cancelled(_), Cancel(_)) → Err("Order already cancelled"),
+
+    // Invalid transitions
+    (state, event) → Err("Invalid transition from " ++ show(state) ++ " on " ++ show(event))
+  }
+}
+
+// Query state properties
+ƒ can_cancel(state: OrderState) → 𝔹 {
+  match state {
+    Created → true,
+    PaymentPending → true,
+    PaymentReceived(_) → true,
+    Processing → false,
+    Shipped(_) → false,
+    Delivered → false,
+    Cancelled(_) → false
+  }
+}
+
+ƒ is_terminal(state: OrderState) → 𝔹 {
+  match state {
+    Delivered → true,
+    Cancelled(_) → true,
+    _ → false
+  }
+}
+
+ƒ get_tracking(state: OrderState) → Option[TrackingInfo] {
+  match state {
+    Shipped(info) → Some(info),
+    _ → None
+  }
+}
+
+// Order entity
+rec Order {
+  id: 𝕊,
+  state: OrderState,
+  history: [(OrderEvent, OrderState)]
+}
+
+ƒ apply_event(order: Order, event: OrderEvent) → Result[Order, 𝕊] {
+  let new_state = transition(order.state, event)?
+  Ok(Order {
+    id: order.id,
+    state: new_state,
+    history: order.history ++ [(event, new_state)]
+  })
+}
+
+ƒ main() → IO[()] {
+  let order = Order {
+    id: "ORD-001",
+    state: Created,
+    history: []
+  }
+
+  // Process order through states
+  let payment = PaymentInfo {
+    amount: 99.99,
+    method: "credit_card",
+    transaction_id: "txn_123"
+  }
+
+  let tracking = TrackingInfo {
+    carrier: "FedEx",
+    tracking_number: "FX123456789",
+    estimated_delivery: today() + days(3)
+  }
+
+  // Chain of events
+  let result = order
+    |> apply_event(SubmitPayment(payment))
+    |> flat_map(λo → apply_event(o, PaymentConfirmed))
+    |> flat_map(λo → apply_event(o, StartProcessing))
+    |> flat_map(λo → apply_event(o, Ship(tracking)))
+    |> flat_map(λo → apply_event(o, MarkDelivered))
+
+  match result {
+    Ok(final_order) → {
+      println("Order completed!")
+      println("Final state: " ++ show(final_order.state))
+      println("History: " ++ show(len(final_order.history)) ++ " events")
+    },
+    Err(e) → println("Error: " ++ e)
+  }
+}

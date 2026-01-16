@@ -1,0 +1,160 @@
+// JSON Data Type and Operations
+// Demonstrates: recursive types, pattern matching, real-world data
+
+// JSON value type
+sum Json {
+  Null,
+  Bool(𝔹),
+  Number(ℝ),
+  String(𝕊),
+  Array([Json]),
+  Object(Map[𝕊, Json])
+}
+
+// Accessors with type safety
+ƒ as_bool(json: Json) → Option[𝔹] {
+  match json {
+    Bool(b) → Some(b),
+    _ → None
+  }
+}
+
+ƒ as_number(json: Json) → Option[ℝ] {
+  match json {
+    Number(n) → Some(n),
+    _ → None
+  }
+}
+
+ƒ as_string(json: Json) → Option[𝕊] {
+  match json {
+    String(s) → Some(s),
+    _ → None
+  }
+}
+
+ƒ as_array(json: Json) → Option[[Json]] {
+  match json {
+    Array(arr) → Some(arr),
+    _ → None
+  }
+}
+
+ƒ as_object(json: Json) → Option[Map[𝕊, Json]] {
+  match json {
+    Object(obj) → Some(obj),
+    _ → None
+  }
+}
+
+// Path-based access
+ƒ get(json: Json, key: 𝕊) → Option[Json] {
+  match json {
+    Object(obj) → obj.get(key),
+    _ → None
+  }
+}
+
+ƒ get_index(json: Json, i: ℕ) → Option[Json] {
+  match json {
+    Array(arr) if i < len(arr) → Some(arr[i]),
+    _ → None
+  }
+}
+
+// Chained access: json["user"]["name"]
+ƒ get_path(json: Json, path: [𝕊]) → Option[Json] {
+  let mut current = json
+  for key ∈ path {
+    match get(current, key) {
+      Some(next) → current = next,
+      None → return None
+    }
+  }
+  Some(current)
+}
+
+// Type-safe getters
+ƒ get_string(json: Json, key: 𝕊) → Option[𝕊] {
+  get(json, key) |> flat_map(as_string)
+}
+
+ƒ get_number(json: Json, key: 𝕊) → Option[ℝ] {
+  get(json, key) |> flat_map(as_number)
+}
+
+ƒ get_bool(json: Json, key: 𝕊) → Option[𝔹] {
+  get(json, key) |> flat_map(as_bool)
+}
+
+// Pretty printing
+ƒ to_string(json: Json) → 𝕊 {
+  to_string_indent(json, 0)
+}
+
+ƒ to_string_indent(json: Json, indent: ℕ) → 𝕊 {
+  let spaces = repeat(" ", indent)
+  let inner_spaces = repeat(" ", indent + 2)
+
+  match json {
+    Null → "null",
+    Bool(true) → "true",
+    Bool(false) → "false",
+    Number(n) → str(n),
+    String(s) → "\"" ++ escape_string(s) ++ "\"",
+    Array([]) → "[]",
+    Array(items) → {
+      let inner = items
+        |> map(λj → inner_spaces ++ to_string_indent(j, indent + 2))
+        |> join(",\n")
+      "[\n" ++ inner ++ "\n" ++ spaces ++ "]"
+    },
+    Object(obj) if obj.is_empty() → "{}",
+    Object(obj) → {
+      let inner = obj
+        |> entries
+        |> map(λ(k, v) → inner_spaces ++ "\"" ++ k ++ "\": " ++ to_string_indent(v, indent + 2))
+        |> join(",\n")
+      "{\n" ++ inner ++ "\n" ++ spaces ++ "}"
+    }
+  }
+}
+
+ƒ escape_string(s: 𝕊) → 𝕊 {
+  s
+    |> replace("\\", "\\\\")
+    |> replace("\"", "\\\"")
+    |> replace("\n", "\\n")
+    |> replace("\t", "\\t")
+    |> replace("\r", "\\r")
+}
+
+// Example: Parse user from JSON
+rec User {
+  id: ℤ,
+  name: 𝕊,
+  email: 𝕊
+}
+
+ƒ parse_user(json: Json) → Option[User] {
+  let id = get_number(json, "id") |> map(to_int)?
+  let name = get_string(json, "name")?
+  let email = get_string(json, "email")?
+  Some(User { id, name, email })
+}
+
+ƒ main() → IO[()] {
+  let json = Object(Map::from([
+    ("id", Number(123.0)),
+    ("name", String("Alice")),
+    ("email", String("alice@example.com")),
+    ("tags", Array([String("admin"), String("active")]))
+  ]))
+
+  println(to_string(json))
+
+  match parse_user(json) {
+    Some(user) → println("Parsed user: " ++ user.name),
+    None → println("Failed to parse user")
+  }
+}

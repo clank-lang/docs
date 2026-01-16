@@ -1,0 +1,202 @@
+// Form Validation Pattern
+// Demonstrates: refinement types for validation, accumulating errors
+
+// Validated types
+τ Username = 𝕊{
+  len(self) ≥ 3 ∧
+  len(self) ≤ 20 ∧
+  all(chars(self), is_alphanumeric)
+}
+
+τ Email = 𝕊{
+  len(self) > 0 ∧
+  contains(self, "@") ∧
+  contains(self, ".") ∧
+  len(self) ≤ 254
+}
+
+τ Password = 𝕊{
+  len(self) ≥ 8 ∧
+  any(chars(self), is_uppercase) ∧
+  any(chars(self), is_lowercase) ∧
+  any(chars(self), is_digit)
+}
+
+τ Age = ℕ{self ≥ 13 ∧ self ≤ 120}
+
+// Validation errors
+sum ValidationError {
+  TooShort { field: 𝕊, min: ℕ, actual: ℕ },
+  TooLong { field: 𝕊, max: ℕ, actual: ℕ },
+  InvalidFormat { field: 𝕊, reason: 𝕊 },
+  MissingRequired { field: 𝕊 },
+  OutOfRange { field: 𝕊, min: ℤ, max: ℤ, actual: ℤ }
+}
+
+// Accumulating validation — collect all errors
+τ Validated[T] = Result[T, [ValidationError]]
+
+// Smart constructors that return validation results
+ƒ validate_username(s: 𝕊) → Validated[Username] {
+  let mut errors: [ValidationError] = []
+
+  if len(s) < 3 {
+    errors = errors ++ [TooShort { field: "username", min: 3, actual: len(s) }]
+  }
+  if len(s) > 20 {
+    errors = errors ++ [TooLong { field: "username", max: 20, actual: len(s) }]
+  }
+  if ¬all(chars(s), is_alphanumeric) {
+    errors = errors ++ [InvalidFormat { field: "username", reason: "must be alphanumeric" }]
+  }
+
+  if is_empty(errors) {
+    Ok(unsafe_coerce(s))  // Safe: we validated the constraints
+  } else {
+    Err(errors)
+  }
+}
+
+ƒ validate_email(s: 𝕊) → Validated[Email] {
+  let mut errors: [ValidationError] = []
+
+  if len(s) == 0 {
+    errors = errors ++ [MissingRequired { field: "email" }]
+  } else {
+    if ¬contains(s, "@") {
+      errors = errors ++ [InvalidFormat { field: "email", reason: "missing @" }]
+    }
+    if ¬contains(s, ".") {
+      errors = errors ++ [InvalidFormat { field: "email", reason: "missing domain" }]
+    }
+    if len(s) > 254 {
+      errors = errors ++ [TooLong { field: "email", max: 254, actual: len(s) }]
+    }
+  }
+
+  if is_empty(errors) {
+    Ok(unsafe_coerce(s))
+  } else {
+    Err(errors)
+  }
+}
+
+ƒ validate_password(s: 𝕊) → Validated[Password] {
+  let mut errors: [ValidationError] = []
+
+  if len(s) < 8 {
+    errors = errors ++ [TooShort { field: "password", min: 8, actual: len(s) }]
+  }
+  if ¬any(chars(s), is_uppercase) {
+    errors = errors ++ [InvalidFormat { field: "password", reason: "needs uppercase letter" }]
+  }
+  if ¬any(chars(s), is_lowercase) {
+    errors = errors ++ [InvalidFormat { field: "password", reason: "needs lowercase letter" }]
+  }
+  if ¬any(chars(s), is_digit) {
+    errors = errors ++ [InvalidFormat { field: "password", reason: "needs digit" }]
+  }
+
+  if is_empty(errors) {
+    Ok(unsafe_coerce(s))
+  } else {
+    Err(errors)
+  }
+}
+
+ƒ validate_age(n: ℤ) → Validated[Age] {
+  if n < 13 ∨ n > 120 {
+    Err([OutOfRange { field: "age", min: 13, max: 120, actual: n }])
+  } else {
+    Ok(unsafe_coerce(n))
+  }
+}
+
+// Registration form
+rec RegistrationInput {
+  username: 𝕊,
+  email: 𝕊,
+  password: 𝕊,
+  age: ℤ
+}
+
+rec ValidRegistration {
+  username: Username,
+  email: Email,
+  password: Password,
+  age: Age
+}
+
+// Combine validations, accumulating all errors
+ƒ validate_registration(input: RegistrationInput) → Validated[ValidRegistration] {
+  let username_result = validate_username(input.username)
+  let email_result = validate_email(input.email)
+  let password_result = validate_password(input.password)
+  let age_result = validate_age(input.age)
+
+  // Collect all errors
+  let all_errors = concat([
+    errors_of(username_result),
+    errors_of(email_result),
+    errors_of(password_result),
+    errors_of(age_result)
+  ])
+
+  if is_empty(all_errors) {
+    // All validations passed
+    Ok(ValidRegistration {
+      username: unwrap(username_result),
+      email: unwrap(email_result),
+      password: unwrap(password_result),
+      age: unwrap(age_result)
+    })
+  } else {
+    Err(all_errors)
+  }
+}
+
+ƒ errors_of[T](result: Validated[T]) → [ValidationError] {
+  match result {
+    Ok(_) → [],
+    Err(errs) → errs
+  }
+}
+
+// Format errors for display
+ƒ format_errors(errors: [ValidationError]) → 𝕊 {
+  errors
+    |> map(format_error)
+    |> join("\n")
+}
+
+ƒ format_error(e: ValidationError) → 𝕊 {
+  match e {
+    TooShort { field, min, actual } →
+      field ++ ": too short (min " ++ str(min) ++ ", got " ++ str(actual) ++ ")",
+    TooLong { field, max, actual } →
+      field ++ ": too long (max " ++ str(max) ++ ", got " ++ str(actual) ++ ")",
+    InvalidFormat { field, reason } →
+      field ++ ": " ++ reason,
+    MissingRequired { field } →
+      field ++ ": required",
+    OutOfRange { field, min, max, actual } →
+      field ++ ": out of range (" ++ str(min) ++ "-" ++ str(max) ++ ", got " ++ str(actual) ++ ")"
+  }
+}
+
+ƒ main() → IO[()] {
+  let input = RegistrationInput {
+    username: "ab",           // Too short
+    email: "not-an-email",    // Invalid
+    password: "weak",         // Too short, missing uppercase, digit
+    age: 10                   // Too young
+  }
+
+  match validate_registration(input) {
+    Ok(reg) → println("Registration valid: " ++ reg.username),
+    Err(errors) → {
+      println("Validation failed:")
+      println(format_errors(errors))
+    }
+  }
+}

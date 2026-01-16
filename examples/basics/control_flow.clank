@@ -1,0 +1,76 @@
+// Control Flow
+// Demonstrates: if expressions, match, loops
+
+// If expression (returns a value)
+ƒ sign(n: ℤ) → 𝕊 {
+  if n > 0 {
+    "positive"
+  } else if n < 0 {
+    "negative"
+  } else {
+    "zero"
+  }
+}
+
+// Match expression with literals
+ƒ day_name(day: ℕ) → 𝕊 {
+  match day {
+    1 → "Monday",
+    2 → "Tuesday",
+    3 → "Wednesday",
+    4 → "Thursday",
+    5 → "Friday",
+    6 → "Saturday",
+    7 → "Sunday",
+    _ → "Invalid day"
+  }
+}
+
+// Match with guards
+ƒ classify(n: ℤ) → 𝕊 {
+  match n {
+    0 → "zero",
+    n if n > 0 ∧ n % 2 == 0 → "positive even",
+    n if n > 0 → "positive odd",
+    n if n % 2 == 0 → "negative even",
+    _ → "negative odd"
+  }
+}
+
+// For loop
+ƒ sum_range(start: ℤ, end: ℤ) → ℤ {
+  let mut total = 0
+  for i ∈ start..end {
+    total = total + i
+  }
+  total
+}
+
+// While loop
+ƒ countdown(n: ℕ) → IO[()] {
+  let mut i = n
+  while i > 0 {
+    println(str(i))
+    i = i - 1
+  }
+  println("Liftoff!")
+}
+
+// Loop with break
+ƒ find_first_even(numbers: [ℤ]) → Option[ℤ] {
+  let mut result: Option[ℤ] = None
+  for n ∈ numbers {
+    if n % 2 == 0 {
+      result = Some(n)
+      break
+    }
+  }
+  result
+}
+
+ƒ main() → IO[()] {
+  println(sign(42))
+  println(day_name(3))
+  println(classify(-4))
+  countdown(5)
+}

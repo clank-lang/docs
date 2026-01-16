@@ -1,0 +1,53 @@
+// Basic Types
+// Demonstrates: type aliases, records, sum types, refinements
+
+// Type alias
+τ Name = 𝕊
+
+// Refinement type — positive integers only
+τ PositiveInt = ℤ{self > 0}
+
+// Refinement with range
+τ Percentage = ℝ{self ≥ 0.0 ∧ self ≤ 100.0}
+
+// Non-empty string
+τ NonEmptyString = 𝕊{len(self) > 0}
+
+// Record type
+rec Point {
+  x: ℤ,
+  y: ℤ
+}
+
+// Record with refined fields
+rec User {
+  id: PositiveInt,
+  name: NonEmptyString,
+  age: ℕ{self ≤ 150}
+}
+
+// Sum type (tagged union)
+sum Option[T] {
+  Some(T),
+  None
+}
+
+// Sum type with multiple variants
+sum Shape {
+  Circle(Point, ℕ),           // center, radius
+  Rectangle(Point, Point),     // top-left, bottom-right
+  Triangle(Point, Point, Point)
+}
+
+// Function using refined types
+ƒ safe_divide(n: ℤ, d: PositiveInt) → ℤ {
+  n ÷ d  // Cannot divide by zero — d is guaranteed > 0
+}
+
+ƒ main() → IO[()] {
+  let p = Point { x: 10, y: 20 }
+  let u = User { id: 1, name: "Alice", age: 30 }
+
+  println("Point: (" ++ str(p.x) ++ ", " ++ str(p.y) ++ ")")
+  println("User: " ++ u.name)
+}

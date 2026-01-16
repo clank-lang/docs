@@ -1,0 +1,6 @@
+// Hello World in Clank
+// Demonstrates: basic function, IO effect, string output
+
+ƒ main() → IO[()] {
+  println("Hello, World!")
+}

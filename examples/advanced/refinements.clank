@@ -1,0 +1,100 @@
+// Advanced Refinement Types
+// Demonstrates: complex predicates, dependent types, proof obligations
+
+// Basic refinements
+τ NonZero = ℤ{self ≠ 0}
+τ Positive = ℤ{self > 0}
+τ Negative = ℤ{self < 0}
+τ Natural = ℤ{self ≥ 0}
+
+// Bounded range
+τ Byte = ℕ{self ≤ 255}
+τ Percentage = ℝ{self ≥ 0.0 ∧ self ≤ 100.0}
+
+// String refinements
+τ NonEmptyString = 𝕊{len(self) > 0}
+τ ShortString = 𝕊{len(self) ≤ 50}
+τ Username = 𝕊{len(self) ≥ 3 ∧ len(self) ≤ 20}
+
+// Array refinements
+τ NonEmpty[T] = [T]{len(self) > 0}
+τ Pair[T] = [T]{len(self) == 2}
+
+// Safe head — cannot fail on NonEmpty
+ƒ head[T](arr: NonEmpty[T]) → T {
+  arr[0]
+}
+
+// Safe last
+ƒ last[T](arr: NonEmpty[T]) → T {
+  arr[len(arr) - 1]
+}
+
+// Division that cannot fail
+ƒ divide(n: ℤ, d: NonZero) → ℤ {
+  n ÷ d
+}
+
+// Safe array access with dependent refinement
+ƒ get_at[T](arr: [T], i: ℕ{i < len(arr)}) → T {
+  arr[i]
+}
+
+// Dependent record — max must be ≥ min
+rec Range {
+  min: ℤ,
+  max: ℤ{self ≥ min}
+}
+
+// Function that returns a value within range bounds
+ƒ clamp(value: ℤ, range: Range) → ℤ{self ≥ range.min ∧ self ≤ range.max} {
+  if value < range.min {
+    range.min
+  } else if value > range.max {
+    range.max
+  } else {
+    value
+  }
+}
+
+// Pre/post conditions for complex contracts
+ƒ binary_search[T: Ord](arr: [T], target: T) → Option[ℕ{self < len(arr)}]
+  pre is_sorted(arr)
+  post match result {
+    Some(i) → arr[i] == target,
+    None → ¬contains(arr, target)
+  }
+{
+  let mut low = 0
+  let mut high = len(arr)
+
+  while low < high {
+    let mid = low + (high - low) ÷ 2
+    match compare(arr[mid], target) {
+      Less → low = mid + 1,
+      Greater → high = mid,
+      Equal → return Some(mid)
+    }
+  }
+  None
+}
+
+// Proof by guards — adding runtime checks that inform the type system
+ƒ safe_sqrt(n: ℤ) → Option[ℝ] {
+  if n >= 0 {
+    // Here the compiler knows n ≥ 0
+    Some(sqrt(float(n)))
+  } else {
+    None
+  }
+}
+
+ƒ main() → IO[()] {
+  let arr: NonEmpty[ℤ] = [1, 2, 3, 4, 5]
+  println("Head: " ++ str(head(arr)))
+  println("Last: " ++ str(last(arr)))
+
+  let range = Range { min: 0, max: 100 }
+  println("Clamped 150: " ++ str(clamp(150, range)))
+  println("Clamped -10: " ++ str(clamp(-10, range)))
+}

@@ -1,0 +1,73 @@
+// Pattern Matching
+// Demonstrates: destructuring, nested patterns, exhaustiveness
+
+sum Option[T] {
+  Some(T),
+  None
+}
+
+sum Result[T, E] {
+  Ok(T),
+  Err(E)
+}
+
+rec Point { x: ℤ, y: ℤ }
+
+// Basic destructuring
+ƒ get_or_default[T](opt: Option[T], default: T) → T {
+  match opt {
+    Some(value) → value,
+    None → default
+  }
+}
+
+// Tuple destructuring
+ƒ swap[T, U](pair: (T, U)) → (U, T) {
+  let (a, b) = pair
+  (b, a)
+}
+
+// Record destructuring
+ƒ distance_from_origin(p: Point) → ℝ {
+  let Point { x, y } = p
+  sqrt(float(x × x + y × y))
+}
+
+// Nested pattern matching
+ƒ describe_option_point(opt: Option[Point]) → 𝕊 {
+  match opt {
+    Some(Point { x: 0, y: 0 }) → "origin",
+    Some(Point { x: 0, y }) → "on y-axis at " ++ str(y),
+    Some(Point { x, y: 0 }) → "on x-axis at " ++ str(x),
+    Some(Point { x, y }) → "at (" ++ str(x) ++ ", " ++ str(y) ++ ")",
+    None → "no point"
+  }
+}
+
+// Pattern matching on Result
+ƒ handle_result(r: Result[ℤ, 𝕊]) → 𝕊 {
+  match r {
+    Ok(n) if n > 0 → "positive: " ++ str(n),
+    Ok(n) if n < 0 → "negative: " ++ str(n),
+    Ok(0) → "zero",
+    Err(msg) → "error: " ++ msg
+  }
+}
+
+// Range patterns
+ƒ grade(score: ℕ) → 𝕊 {
+  match score {
+    90..=100 → "A",
+    80..90 → "B",
+    70..80 → "C",
+    60..70 → "D",
+    _ → "F"
+  }
+}
+
+ƒ main() → IO[()] {
+  let p = Point { x: 3, y: 4 }
+  println("Distance: " ++ str(distance_from_origin(p)))
+  println(describe_option_point(Some(p)))
+  println(grade(85))
+}

@@ -1,0 +1,34 @@
+// Basic Functions
+// Demonstrates: function definitions, parameters, return types
+
+// Simple function with two parameters
+ƒ add(a: ℤ, b: ℤ) → ℤ {
+  a + b
+}
+
+// Function with single parameter
+ƒ double(n: ℤ) → ℤ {
+  n × 2
+}
+
+// Function with no parameters
+ƒ answer() → ℤ {
+  42
+}
+
+// Generic identity function
+ƒ identity[T](x: T) → T {
+  x
+}
+
+// Function composition
+ƒ compose[A, B, C](f: (B) → C, g: (A) → B) → (A) → C {
+  λa → f(g(a))
+}
+
+// Example usage
+ƒ main() → IO[()] {
+  let sum = add(3, 4)
+  let doubled = double(sum)
+  println("Result: " ++ str(doubled))
+}
