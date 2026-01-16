@@ -21,7 +21,7 @@ If Clank isn't installed, help the user set it up:
 
 ```bash
 # Install Clank globally with bun
-bun install -g clank
+bun install -g clank-lang
 
 # Verify installation
 clank --version
