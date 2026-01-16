@@ -63,7 +63,7 @@ function add(a: bigint, b: bigint): bigint {
 
 **Common mistakes:**
 - Adding explicit `return` — not wrong, but unnecessary
-- Using `Int` for small numbers when `ℤ32` would be more efficient
+- Using unbounded `ℤ` when bounded `ℕ` (naturals) would better express intent
 
 ---
 

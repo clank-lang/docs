@@ -13,7 +13,7 @@ Clank is a programming language where:
 
 ```clank
 // Function with refinement type
-ƒ divide(n: ℤ, d: ℤ{d ≠ 0}) → ℤ {
+ƒ divide(n: ℤ, d: ℤ{self ≠ 0}) → ℤ {
   n ÷ d
 }
 
@@ -54,10 +54,10 @@ Claude Code will automatically load relevant documentation when working with `.c
 |------|-------------|
 | [SKILL.md](SKILL.md) | Skill entry point and quick reference |
 | [SYNTAX.md](SYNTAX.md) | Complete grammar, operators, and keywords |
-| [TYPES.md](TYPES.md) | Type system — primitives, refinements, effects |
-| [AST-JSON.md](AST-JSON.md) | AST node schema for JSON input/output |
-| [COMPILER.md](COMPILER.md) | Compiler interface, flags, and output format |
-| [REPAIRS.md](REPAIRS.md) | Repair system, PatchOps, and fix patterns |
+| TYPES.md *(planned)* | Type system — primitives, refinements, effects |
+| AST-JSON.md *(planned)* | AST node schema for JSON input/output |
+| COMPILER.md *(planned)* | Compiler interface, flags, and output format |
+| REPAIRS.md *(planned)* | Repair system, PatchOps, and fix patterns |
 | [EXAMPLES.md](EXAMPLES.md) | Annotated code examples by category |
 | [IDIOMS.md](IDIOMS.md) | Best practices and anti-patterns |
 

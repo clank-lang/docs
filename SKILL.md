@@ -19,13 +19,13 @@ Use this skill when:
 
 | File | Purpose |
 |------|---------|
-| `TYPES.md` | Type system reference — refinement types, dependent types, type inference |
-| `AST-JSON.md` | AST structure for reading/writing Clank's JSON intermediate representation |
-| `COMPILER.md` | Compiler phases, flags, and output formats |
-| `REPAIRS.md` | Error recovery patterns — how to fix common compiler errors |
 | `SYNTAX.md` | Unicode operators, keywords, and grammar |
 | `EXAMPLES.md` | Annotated code examples for common patterns |
 | `IDIOMS.md` | Idiomatic Clank — preferred patterns and anti-patterns |
+| `TYPES.md` *(planned)* | Type system reference — refinement types, dependent types, type inference |
+| `AST-JSON.md` *(planned)* | AST structure for reading/writing Clank's JSON intermediate representation |
+| `COMPILER.md` *(planned)* | Compiler phases, flags, and output formats |
+| `REPAIRS.md` *(planned)* | Error recovery patterns — how to fix common compiler errors |
 
 ## Quick Reference
 
@@ -140,6 +140,33 @@ Clank never silently converts types. All conversions must be explicit.
 
 **Key principle**: Always operate on `canonical_ast` from the compiler response, not your original input.
 
+### AST JSON Example
+
+A simple function in AST JSON format:
+
+```json
+{
+  "kind": "program",
+  "declarations": [
+    {
+      "kind": "fn",
+      "name": "add",
+      "params": [
+        { "name": "a", "type": { "kind": "named", "name": "Int" } },
+        { "name": "b", "type": { "kind": "named", "name": "Int" } }
+      ],
+      "returnType": { "kind": "named", "name": "Int" },
+      "body": { "kind": "binary", "op": "+", "left": { "kind": "ident", "name": "a" }, "right": { "kind": "ident", "name": "b" } }
+    }
+  ]
+}
+```
+
+**Source fragments**: Any node can use `{ "source": "..." }` for convenience:
+```json
+{ "body": { "source": "a + b" } }
+```
+
 ## Links
 
 - Main repository: https://github.com/clank-lang/clank
@@ -148,9 +175,9 @@ Clank never silently converts types. All conversions must be explicit.
 ## Reference Documentation
 
 - [SYNTAX.md](SYNTAX.md) - Complete grammar and operator reference
-- [TYPES.md](TYPES.md) - Type system reference
-- [AST-JSON.md](AST-JSON.md) - Complete AST node schema
-- [COMPILER.md](COMPILER.md) - Compiler interface and output format
-- [REPAIRS.md](REPAIRS.md) - Repair system and PatchOp reference
 - [EXAMPLES.md](EXAMPLES.md) - Annotated code examples
 - [IDIOMS.md](IDIOMS.md) - Idiomatic patterns and anti-patterns
+- TYPES.md *(planned)* - Type system reference
+- AST-JSON.md *(planned)* - Complete AST node schema
+- COMPILER.md *(planned)* - Compiler interface and output format
+- REPAIRS.md *(planned)* - Repair system and PatchOp reference
