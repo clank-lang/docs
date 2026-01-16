@@ -15,6 +15,20 @@ Use this skill when:
 - Translating code from other languages into Clank
 - Understanding Clank compiler output or error messages
 
+## Setup
+
+If Clank isn't installed, help the user set it up:
+
+```bash
+# Install Clank globally with bun
+bun install -g clank
+
+# Verify installation
+clank --version
+```
+
+If bun isn't installed, the user can get it from [bun.sh](https://bun.sh).
+
 ## Skill Files
 
 | File | Purpose |
