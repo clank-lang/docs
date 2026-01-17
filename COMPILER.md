@@ -29,14 +29,17 @@ clank run main.clank                 # Compile and execute with Bun
 # Compile from AST JSON
 clank compile program.json --input=ast -o dist/
 
-# Compile from patch operations
-clank compile patch.json --input=patch
-
 # Output structured JSON diagnostics
 clank compile main.clank --emit=json
 
 # Output canonical AST as JSON
 clank compile main.clank --emit=ast
+
+# Output canonical AST as .clank source (debug view)
+clank compile main.clank --emit=clank
+
+# Emit TypeScript instead of JavaScript
+clank compile main.clank -o dist/ --ts
 
 # Round-trip: source -> AST -> JavaScript
 clank compile main.clank --emit=ast | clank compile --input=ast -o dist/
@@ -48,7 +51,6 @@ clank compile main.clank --emit=ast | clank compile --input=ast -o dist/
 |------|-------------|----------|
 | (default) | `.clank` source text | Human authoring, debugging |
 | `--input=ast` | Full AST JSON | Initial submission, major restructuring |
-| `--input=patch` | List of PatchOps | Iterative refinement (preferred) |
 
 ### AST JSON Input
 
@@ -62,26 +64,18 @@ Submit a complete program as JSON:
       "kind": "fn",
       "name": "main",
       "params": [],
-      "returnType": { "kind": "effect", "effect": "IO", "inner": { "kind": "tuple", "elements": [] } },
-      "body": { "source": "{ println(\"Hello\") }" }
+  "returnType": {
+    "kind": "effect",
+    "effects": [{ "kind": "named", "name": "IO" }],
+    "resultType": { "kind": "tuple", "elements": [] }
+  },
+  "body": { "source": "{ println(\"Hello\") }" }
+
     }
   ]
 }
 ```
 
-### Patch Input
-
-Submit incremental changes:
-
-```json
-{
-  "base_ast_hash": "abc123",
-  "patches": [
-    { "op": "replace_node", "node_id": "n5", "new_node": { ... } },
-    { "op": "insert_before", "target_id": "n10", "new_statement": { ... } }
-  ]
-}
-```
 
 ## Output Modes
 
@@ -90,9 +84,7 @@ Submit incremental changes:
 | (default) | JavaScript files | `dist/*.js` |
 | `--emit=json` | Full CompileResult | Structured JSON with repairs |
 | `--emit=ast` | Canonical AST | JSON AST only |
-| `--emit=repairs` | Repairs only | Just repair candidates |
-| `--emit=js` | JavaScript only | Generated code |
-| `--emit=all` | Everything | Full output bundle |
+| `--emit=clank` | Canonical AST as .clank | Debug-friendly source |
 
 ## CompileResult Schema
 
@@ -104,7 +96,7 @@ interface CompileResult {
   status: "success" | "incomplete" | "error";
 
   // Compiler version
-  compiler_version: string;
+  compilerVersion: string;
 
   // The canonical (normalized) AST
   // ALWAYS operate on this, not your original input
@@ -124,8 +116,9 @@ interface CompileResult {
 
   // Generated artifacts (only if status == "success")
   output?: {
-    js: string;              // Generated JavaScript
-    js_map?: string;         // Source map
+    js?: string;             // Generated JavaScript
+    ts?: string;             // Generated TypeScript
+    jsMap?: string;          // Source map
     dts?: string;            // TypeScript declarations
   };
 

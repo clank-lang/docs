@@ -98,7 +98,7 @@ Complete schema for Clank AST nodes. Every node has a `kind` field identifying i
 {
   "kind": "use",
   "path": ["std", "io"],
-  "names": ["print", "println"]  // optional, imports all if omitted
+  "items": ["print", "println"]  // optional, imports all if omitted
 }
 ```
 
@@ -158,7 +158,6 @@ Complete schema for Clank AST nodes. Every node has a `kind` field identifying i
 {
   "kind": "call",
   "callee": { /* Expr */ },
-  "typeArgs": [{ /* TypeExpr */ }],  // optional
   "args": [{ /* Expr */ }]
 }
 ```
@@ -293,7 +292,7 @@ This is the `?` operator for Result/Option propagation.
   "pattern": { /* Pattern */ },
   "type": { /* TypeExpr */ },  // optional
   "mutable": false,
-  "value": { /* Expr */ }
+  "init": { /* Expr */ }
 }
 ```
 
@@ -392,7 +391,7 @@ This is the `?` operator for Result/Option propagation.
 }
 ```
 
-Built-in types: `Int`, `Float`, `Bool`, `Str`, `Unit`, `unknown`, `never`
+Built-in types: `Int`, `Nat`, `Float`, `Bool`, `Str`, `Unit`
 
 ### Array Type
 
@@ -428,7 +427,7 @@ Built-in types: `Int`, `Float`, `Bool`, `Str`, `Unit`, `unknown`, `never`
 {
   "kind": "refined",
   "base": { /* TypeExpr */ },
-  "variable": "x",  // optional, defaults to base type name
+  "varName": "x",  // optional
   "predicate": { /* Expr */ }
 }
 ```
@@ -438,7 +437,7 @@ Example: `Int{x > 0}`:
 {
   "kind": "refined",
   "base": { "kind": "named", "name": "Int" },
-  "variable": "x",
+  "varName": "x",
   "predicate": { "source": "x > 0" }
 }
 ```
@@ -448,9 +447,8 @@ Example: `Int{x > 0}`:
 ```json
 {
   "kind": "effect",
-  "effect": "IO",  // IO, Err, Async, Mut
-  "inner": { /* TypeExpr */ },
-  "errorType": { /* TypeExpr */ }  // only for Err
+  "effects": [{ /* Effect type */ }],
+  "resultType": { /* TypeExpr */ }
 }
 ```
 
@@ -458,18 +456,27 @@ Example: `IO[()]`:
 ```json
 {
   "kind": "effect",
-  "effect": "IO",
-  "inner": { "kind": "tuple", "elements": [] }
+  "effects": [{ "kind": "named", "name": "IO" }],
+  "resultType": { "kind": "tuple", "elements": [] }
 }
 ```
 
-Example: `Err[MyError, Int]`:
+Example: `IO + Err[MyError, Int]`:
 ```json
 {
   "kind": "effect",
-  "effect": "Err",
-  "errorType": { "kind": "named", "name": "MyError" },
-  "inner": { "kind": "named", "name": "Int" }
+  "effects": [
+    { "kind": "named", "name": "IO" },
+    {
+      "kind": "named",
+      "name": "Err",
+      "args": [
+        { "kind": "named", "name": "MyError" },
+        { "kind": "named", "name": "Int" }
+      ]
+    }
+  ],
+  "resultType": { "kind": "named", "name": "Int" }
 }
 ```
 
@@ -480,7 +487,8 @@ Example: `Err[MyError, Int]`:
   "kind": "recordType",
   "fields": [
     { "name": "fieldName", "type": { /* TypeExpr */ } }
-  ]
+  ],
+  "isOpen": false
 }
 ```
 
@@ -490,7 +498,7 @@ Example: `Err[MyError, Int]`:
 {
   "kind": "named",
   "name": "Option",
-  "typeArgs": [{ "kind": "named", "name": "Int" }]
+  "args": [{ "kind": "named", "name": "Int" }]
 }
 ```
 

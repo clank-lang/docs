@@ -8,6 +8,7 @@ Complete reference for Clank's machine-actionable repair system.
 - [RepairCandidate Schema](#repaircandidate-schema)
 - [PatchOp Types](#patchop-types)
 - [Repair Strategy](#repair-strategy)
+- [Repair Compatibility](#repair-compatibility)
 - [Implemented Repairs](#implemented-repairs)
 - [Examples](#examples)
 
@@ -135,7 +136,7 @@ Insert a statement after another:
   "new_statement": {
     "kind": "let",
     "pattern": { "kind": "ident", "name": "y" },
-    "value": { "source": "x + 1" }
+    "init": { "source": "x + 1" }
   }
 }
 ```
@@ -189,7 +190,7 @@ Add effects to a function signature:
 
 ### rename_symbol
 
-Rename a symbol:
+Rename an identifier symbol:
 
 ```json
 {
@@ -197,6 +198,18 @@ Rename a symbol:
   "node_id": "n5",
   "old_name": "helo",
   "new_name": "hello"
+}
+```
+
+### rename
+
+Rename a symbol by ID (used for non-identifier renames):
+
+```json
+{
+  "op": "rename",
+  "symbol_id": "sym_1",
+  "new_name": "updated"
 }
 ```
 
@@ -302,6 +315,86 @@ Optimize for monotonic progress:
 6. Recompile with --input=ast (updated canonical_ast)
 7. Goto 2
 ```
+
+## Repair Compatibility
+
+Repairs include compatibility metadata that enables batch application, reducing agent↔compiler iterations.
+
+### Compatibility Schema
+
+```typescript
+interface RepairCompatibility {
+  /** Repairs that cannot be applied together with this one */
+  conflicts_with?: string[];  // repair IDs
+
+  /** Repairs that must be applied before this one */
+  requires?: string[];  // repair IDs
+
+  /** Repairs with the same batch_key commute and can be applied together */
+  batch_key?: string;
+}
+```
+
+### Compatibility Rules
+
+| Rule | Description |
+|------|-------------|
+| **Same diagnostic** | Multiple repairs for the same diagnostic conflict (they're alternatives) |
+| **Same node** | Repairs touching the same `node_id` conflict |
+| **Effect widening** | Multiple `widen_effect` on the same function conflict |
+| **Disjoint renames** | `rename_symbol` repairs with disjoint targets share a `batch_key` |
+| **Cascading fixes** | Child repairs `require` parent repairs |
+
+### Batch Application
+
+When applying a compatible batch:
+
+```
+1. Check compatibility.conflicts_with — exclude conflicting repairs
+2. Check compatibility.requires — apply prerequisites first
+3. Group by batch_key — repairs with same key can be applied together
+4. Apply all repairs in batch to canonical_ast
+5. Recompile once
+6. Verify: combined expected_delta achieved
+```
+
+### Compatibility Example
+
+```json
+{
+  "repairs": [
+    {
+      "id": "rc1",
+      "title": "Rename 'alph' to 'alpha'",
+      "edits": [{ "op": "rename_symbol", "node_id": "n5", "old_name": "alph", "new_name": "alpha" }],
+      "compatibility": {
+        "conflicts_with": ["rc2"],
+        "batch_key": "batch:local_fix:rename_symbol"
+      }
+    },
+    {
+      "id": "rc2",
+      "title": "Rename 'alph' to 'alps'",
+      "edits": [{ "op": "rename_symbol", "node_id": "n5", "old_name": "alph", "new_name": "alps" }],
+      "compatibility": {
+        "conflicts_with": ["rc1"]
+      }
+    },
+    {
+      "id": "rc3",
+      "title": "Rename 'bet' to 'beta'",
+      "edits": [{ "op": "rename_symbol", "node_id": "n8", "old_name": "bet", "new_name": "beta" }],
+      "compatibility": {
+        "batch_key": "batch:local_fix:rename_symbol"
+      }
+    }
+  ]
+}
+```
+
+In this example:
+- `rc1` and `rc2` conflict (alternatives for same diagnostic)
+- `rc1` and `rc3` can be batched (same `batch_key`, disjoint nodes)
 
 ## Implemented Repairs
 
