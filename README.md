@@ -42,7 +42,7 @@ Add to your Claude Code configuration:
 
 ```json
 {
-  "skills": ["github:clank-lang/docs"]
+  "skills": ["github:clank-lang/skill"]
 }
 ```
 
